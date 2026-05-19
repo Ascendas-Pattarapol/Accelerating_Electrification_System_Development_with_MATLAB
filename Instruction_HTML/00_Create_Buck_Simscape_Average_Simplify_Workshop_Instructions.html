@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop 00: Create a Buck Converter with the Average Switch Model</title>
+  <style>
+:root {
+  color-scheme: light;
+  --page: #f6f8fb;
+  --surface: #ffffff;
+  --ink: #1f2937;
+  --line: #d7dde6;
+  --accent: #0b6f8f;
+  --accent-soft: #e7f5f8;
+  --code-bg: #f0f3f7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.58;
+}
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 40px 28px 64px;
+  background: var(--surface);
+  min-height: 100vh;
+  box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.06), 0 18px 50px rgba(31, 41, 55, 0.08);
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  color: #13202f;
+  margin: 1.6em 0 0.55em;
+}
+h1 {
+  margin-top: 0;
+  padding-bottom: 0.45em;
+  border-bottom: 3px solid var(--accent);
+  font-size: 2.2rem;
+}
+h2 {
+  border-top: 1px solid var(--line);
+  padding-top: 1.15em;
+  font-size: 1.45rem;
+}
+h3 { font-size: 1.15rem; }
+p { margin: 0.75em 0; }
+ul, ol { padding-left: 1.45rem; margin: 0.7em 0 1em; }
+li { margin: 0.28em 0; }
+code {
+  background: var(--code-bg);
+  border: 1px solid #dce2ea;
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.93em;
+}
+pre {
+  overflow-x: auto;
+  background: #eef6f8;
+  color: #12313c;
+  border: 1px solid #c8d9df;
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin: 1em 0 1.25em;
+}
+pre code {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  font-size: 0.94rem;
+}
+figure {
+  margin: 1.2rem 0 1.55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 10px;
+}
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+figcaption {
+  color: #4b5563;
+  font-size: 0.92rem;
+  margin-top: 8px;
+  text-align: center;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0 1.35em;
+  font-size: 0.95rem;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  vertical-align: top;
+}
+th {
+  background: var(--accent-soft);
+  color: #12313c;
+  text-align: left;
+  font-weight: 650;
+}
+tr:nth-child(even) td { background: #fafbfd; }
+@media (max-width: 720px) {
+  main { padding: 28px 18px 48px; box-shadow: none; }
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.25rem; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Workshop 00: Create a Buck Converter with the Average Switch Model</h1>
+    <h2>Goal</h2>
+    <p>Create a simple buck converter using the Simscape Electrical averaged <code>Buck Converter</code> block. This workshop follows the clip <code>00_Create_Buck_Simscape_Average_Simplify.mp4</code>.</p>
+    <p>Start from:</p>
+    <pre><code>Create_Buck_Simscape_Elec__Average_Simplify.slx</code></pre>
+    <p>Use the finished model as the reference:</p>
+    <pre><code>Create_Buck_Simscape_Elec__Average_Simplify_finished.slx</code></pre>
+    <p>The purpose of this workshop is to show a simplified buck converter workflow before using detailed switching components. The average switch model uses a duty-cycle input directly, so the converter can be simulated quickly without building the MOSFET, diode, inductor, and capacitor from separate blocks.</p>
+    <p>By the end of this workshop, participants should be able to:</p>
+    <ul>
+    <li>Add the Simscape Electrical <code>Buck Converter</code> block.</li>
+    <li>Configure it for averaged switching behavior.</li>
+    <li>Drive the converter using a constant duty-cycle command.</li>
+    <li>Connect a resistor load and measure the output voltage.</li>
+    <li>Add a DC motor load subsystem.</li>
+    <li>Compare output voltage and motor speed behavior in Simulation Data Inspector.</li>
+    </ul>
+    <h2>Prerequisites</h2>
+    <ul>
+    <li>MATLAB with Simulink.</li>
+    <li>Simscape and Simscape Electrical.</li>
+    <li>Model files in <code>Simplified_Version</code>.</li>
+    </ul>
+    <h2>Starting Files</h2>
+    <table><thead><tr><th>File</th><th>Purpose</th></tr></thead><tbody>
+    <tr><td><code>Create_Buck_Simscape_Elec__Average_Simplify.slx</code></td><td>Starting model with source, reference, duty signal, resistor load, voltage sensor, converter blocks, and scope</td></tr>
+    <tr><td><code>Create_Buck_Simscape_Elec__Average_Simplify_finished.slx</code></td><td>Finished reference model with the averaged buck converter and DC motor load</td></tr>
+    </tbody></table>
+    <h2>Starting Model</h2>
+    <p>The starting model contains these main blocks:</p>
+    <table><thead><tr><th>Block</th><th>Purpose</th></tr></thead><tbody>
+    <tr><td><code>DC Voltage Source</code></td><td>Input supply for the converter</td></tr>
+    <tr><td><code>Electrical Reference</code></td><td>Electrical ground reference</td></tr>
+    <tr><td><code>Solver Configuration</code></td><td>Required Simscape solver block</td></tr>
+    <tr><td><code>Constant</code></td><td>Duty-cycle command</td></tr>
+    <tr><td><code>Simulink-PS Converter</code></td><td>Converts the duty command to a physical signal</td></tr>
+    <tr><td><code>Resistor</code></td><td>Initial electrical load</td></tr>
+    <tr><td><code>Voltage Sensor</code></td><td>Measures output voltage</td></tr>
+    <tr><td><code>PS-Simulink Converter</code></td><td>Converts measured voltage to Simulink</td></tr>
+    <tr><td><code>Scope</code></td><td>Displays the measured voltage</td></tr>
+    </tbody></table>
+    <p>Detected starting settings:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Stop time</td><td><code>500 s</code></td></tr>
+    <tr><td>DC source voltage</td><td><code>50 V</code></td></tr>
+    <tr><td>Duty command</td><td><code>0.5</code></td></tr>
+    <tr><td>Resistor load</td><td><code>1 Ohm</code></td></tr>
+    </tbody></table>
+    <h2>Finished Model Reference</h2>
+    <p>The finished model adds:</p>
+    <table><thead><tr><th>Added Item</th><th>Purpose</th></tr></thead><tbody>
+    <tr><td><code>Buck Converter</code></td><td>Average switch buck converter stage</td></tr>
+    <tr><td><code>DC_Motor</code> subsystem</td><td>Motor load connected to the converter output</td></tr>
+    <tr><td><code>Scope1</code> inside <code>DC_Motor</code></td><td>Motor speed display</td></tr>
+    <tr><td>Simulation Data Inspector runs</td><td>Compare output voltage and motor speed</td></tr>
+    </tbody></table>
+    <p>Detected finished settings:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Stop time</td><td><code>5000 s</code></td></tr>
+    <tr><td>Buck converter device type</td><td>Averaged switching device</td></tr>
+    <tr><td>DC source voltage</td><td><code>50 V</code></td></tr>
+    <tr><td>Duty command</td><td><code>0.5</code></td></tr>
+    <tr><td>Resistor load</td><td><code>1 Ohm</code></td></tr>
+    <tr><td>Buck converter inductor <code>Lf</code></td><td><code>1e-6 H</code></td></tr>
+    <tr><td>Buck converter capacitor <code>Cf</code></td><td><code>1e-7 F</code></td></tr>
+    <tr><td>Switch on resistance <code>Ron</code></td><td><code>0.001 Ohm</code></td></tr>
+    <tr><td>Switch off conductance <code>Goff</code></td><td><code>1e-5 1/Ohm</code></td></tr>
+    </tbody></table>
+    <p>The expected resistor-load output voltage is approximately:</p>
+    <pre><code>Vout = Duty * Vin = 0.5 * 50 V = 25 V</code></pre>
+    <h2>Workshop Procedure</h2>
+    <p>Follow this order in the workshop:</p>
+    <pre><code>Open starting model -&gt; Add averaged Buck Converter
+-&gt; Configure Buck Converter parameters -&gt; Wire source, duty input, and resistor load
+-&gt; Run resistor-load simulation -&gt; View output voltage
+-&gt; Create/open DC_Motor subsystem -&gt; Configure DC motor load
+-&gt; Connect DC_Motor to converter output -&gt; Run final simulation
+-&gt; Compare voltage and motor speed in Simulation Data Inspector</code></pre>
+    <h3>1. Open the starting average buck model</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-01-starting-model.jpg" alt="Starting average buck model" loading="lazy"><figcaption>Starting average buck model</figcaption></figure>
+    <p><em>Video screenshot: starting model with the prepared source, duty command, resistor load, voltage sensor, and scope.</em></p>
+    <ol>
+    <li>Open:</li>
+    </ol>
+    <pre><code>   Create_Buck_Simscape_Elec__Average_Simplify.slx</code></pre>
+    <ol>
+    <li>Review the prepared blocks:</li>
+    </ol>
+    <ul>
+    <li><code>DC Voltage Source</code></li>
+    <li><code>Electrical Reference</code></li>
+    <li><code>Solver Configuration</code></li>
+    <li><code>Constant</code></li>
+    <li><code>Simulink-PS Converter</code></li>
+    <li><code>Resistor</code></li>
+    <li><code>Voltage Sensor</code></li>
+    <li><code>PS-Simulink Converter</code></li>
+    <li><code>Scope</code></li>
+    </ul>
+    <ol>
+    <li>Confirm the duty command is:</li>
+    </ol>
+    <pre><code>   0.5</code></pre>
+    <ol>
+    <li>Explain that this duty command will directly control the averaged buck converter.</li>
+    </ol>
+    <h3>2. Add the Buck Converter block</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-02-add-buck-converter.jpg" alt="Add Buck Converter block" loading="lazy"><figcaption>Add Buck Converter block</figcaption></figure>
+    <p><em>Video screenshot: adding the Simscape Electrical Buck Converter block to the model.</em></p>
+    <ol>
+    <li>Open the Library Browser or use quick insert.</li>
+    <li>Search for:</li>
+    </ol>
+    <pre><code>   Buck Converter</code></pre>
+    <ol>
+    <li>Add the Simscape Electrical <code>Buck Converter</code> block to the center of the model.</li>
+    <li>Place it between the DC input source and the output load.</li>
+    </ol>
+    <p>Concept to explain:</p>
+    <pre><code>The Buck Converter block represents the converter power stage as one reusable Simscape block.
+For this lesson, it is configured as an averaged model, so it does not require PWM switching pulses.</code></pre>
+    <h3>3. Configure the Buck Converter as an averaged model</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-03-configure-average-buck.jpg" alt="Configure averaged Buck Converter" loading="lazy"><figcaption>Configure averaged Buck Converter</figcaption></figure>
+    <p><em>Video screenshot: Buck Converter block parameters configured for averaged switching behavior.</em></p>
+    <p>Open the <code>Buck Converter</code> block parameters.</p>
+    <p>Confirm or set the converter device type to:</p>
+    <pre><code>Averaged switching device</code></pre>
+    <p>Use the default/simplified converter parameters shown in the finished model:</p>
+    <table><thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Switch on resistance <code>Ron</code></td><td><code>0.001 Ohm</code></td></tr>
+    <tr><td>Switch off conductance <code>Goff</code></td><td><code>1e-5 1/Ohm</code></td></tr>
+    <tr><td>Forward voltage <code>Vf</code></td><td><code>0.8 V</code></td></tr>
+    <tr><td>Filter inductance <code>Lf</code></td><td><code>1e-6 H</code></td></tr>
+    <tr><td>Filter capacitance <code>Cf</code></td><td><code>1e-7 F</code></td></tr>
+    </tbody></table>
+    <p>The important point is not detailed semiconductor switching. The lesson is about creating a fast average converter model driven by a duty command.</p>
+    <h3>4. Connect the DC source to the converter input</h3>
+    <p>Connect the input side of the <code>Buck Converter</code>:</p>
+    <pre><code>DC Voltage Source positive -&gt; Buck Converter p1
+DC Voltage Source negative -&gt; Buck Converter n1
+Electrical Reference -&gt; DC Voltage Source negative / Buck Converter n1
+Solver Configuration -&gt; electrical reference node</code></pre>
+    <p>The input supply is:</p>
+    <pre><code>50 V</code></pre>
+    <h3>5. Connect the duty command to the converter gate input</h3>
+    <p>Connect the control signal:</p>
+    <pre><code>Constant(0.5) -&gt; Simulink-PS Converter -&gt; Buck Converter G</code></pre>
+    <p>Explain:</p>
+    <pre><code>The averaged Buck Converter block uses this physical-signal input as the duty ratio.
+Duty = 0.5 means the ideal average output should be about half of the input voltage.</code></pre>
+    <h3>6. Connect the resistor load and voltage sensor</h3>
+    <p>Connect the output side of the <code>Buck Converter</code>:</p>
+    <pre><code>Buck Converter p2 -&gt; Resistor positive
+Buck Converter n2 -&gt; Resistor negative
+Voltage Sensor across the resistor
+Voltage Sensor output -&gt; PS-Simulink Converter -&gt; Scope</code></pre>
+    <p>Keep the resistor value:</p>
+    <pre><code>1 Ohm</code></pre>
+    <p>Name or identify the measured signal as:</p>
+    <pre><code>Voltage</code></pre>
+    <h3>7. Run the resistor-load simulation</h3>
+    <ol>
+    <li>Run the model with the resistor load connected.</li>
+    <li>Open the Scope or Simulation Data Inspector.</li>
+    <li>Confirm the output voltage rises near:</li>
+    </ol>
+    <pre><code>   25 V</code></pre>
+    <ol>
+    <li>Explain the relationship:</li>
+    </ol>
+    <pre><code>   50 V input * 0.5 duty = about 25 V output</code></pre>
+    <p>This validates the basic averaged buck converter connection before adding the motor load.</p>
+    <h3>8. Create the DC_Motor subsystem</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-07-add-dc-motor-subsystem.jpg" alt="Add DC_Motor subsystem" loading="lazy"><figcaption>Add DC_Motor subsystem</figcaption></figure>
+    <p><em>Video screenshot: DC_Motor subsystem added at the converter output side.</em></p>
+    <p>Create or open the <code>DC_Motor</code> subsystem used in the finished model.</p>
+    <p>The subsystem has two electrical conserving ports:</p>
+    <pre><code>DC+
+DC-</code></pre>
+    <p>Inside the subsystem, add or review these blocks:</p>
+    <table><thead><tr><th>Block</th><th>Purpose</th></tr></thead><tbody>
+    <tr><td><code>DC Motor</code></td><td>Electrical-to-rotational motor model</td></tr>
+    <tr><td><code>Inertia</code></td><td>Rotational load inertia</td></tr>
+    <tr><td><code>Rotational Damper</code></td><td>Mechanical damping load</td></tr>
+    <tr><td><code>Mechanical Rotational Reference</code></td><td>Mechanical reference</td></tr>
+    <tr><td><code>Ideal Rotational Motion Sensor</code></td><td>Measures motor speed</td></tr>
+    <tr><td><code>PS-Simulink Converter1</code></td><td>Converts speed to Simulink</td></tr>
+    <tr><td><code>Scope1</code></td><td>Displays motor speed</td></tr>
+    </tbody></table>
+    <h3>9. Configure the DC motor load</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-08-dc-motor-subsystem.jpg" alt="DC motor subsystem" loading="lazy"><figcaption>DC motor subsystem</figcaption></figure>
+    <p><em>Video screenshot: internal DC_Motor subsystem structure with motor, inertia, damper, speed sensor, and scope.</em></p>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-09-configure-dc-motor.jpg" alt="Configure DC motor" loading="lazy"><figcaption>Configure DC motor</figcaption></figure>
+    <p><em>Video screenshot: DC Motor block parameter dialog.</em></p>
+    <p>Use the DC motor settings shown in the finished model:</p>
+    <table><thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Parameterization</td><td>Circuit parameters</td></tr>
+    <tr><td>Armature resistance <code>Ra</code></td><td><code>3.9 Ohm</code></td></tr>
+    <tr><td>Armature inductance <code>La</code></td><td><code>12e-6 H</code></td></tr>
+    <tr><td>Back-emf constant <code>Kv</code></td><td><code>0.072e-3 V/rpm</code></td></tr>
+    <tr><td>Rated voltage</td><td><code>1.5 V</code></td></tr>
+    <tr><td>Rated speed</td><td><code>15000 rpm</code></td></tr>
+    <tr><td>Rated power</td><td><code>0.08 W</code></td></tr>
+    </tbody></table>
+    <p>Use these mechanical load settings:</p>
+    <table><thead><tr><th>Block</th><th>Parameter</th><th>Value</th></tr></thead><tbody>
+    <tr><td><code>Inertia</code></td><td>Inertia</td><td><code>0.01 kg*m^2</code></td></tr>
+    <tr><td><code>Rotational Damper</code></td><td>Damping</td><td><code>1e-3 N*m*s/rad</code></td></tr>
+    </tbody></table>
+    <p>Connect the motor mechanical side:</p>
+    <pre><code>DC Motor R -&gt; Inertia -&gt; Ideal Rotational Motion Sensor -&gt; Rotational Damper
+DC Motor C -&gt; Mechanical Rotational Reference
+Rotational Damper other side -&gt; Mechanical Rotational Reference
+Motion Sensor speed output -&gt; PS-Simulink Converter1 -&gt; Scope1</code></pre>
+    <h3>10. Connect the DC_Motor subsystem to the converter output</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-10-connect-dc-motor.jpg" alt="Connect DC_Motor load" loading="lazy"><figcaption>Connect DC_Motor load</figcaption></figure>
+    <p><em>Video screenshot: DC_Motor subsystem connected in parallel with the resistor load.</em></p>
+    <p>Return to the top-level model.</p>
+    <p>Connect the motor subsystem in parallel with the resistor and voltage sensor:</p>
+    <pre><code>Buck Converter p2 -&gt; DC_Motor DC+
+Buck Converter n2 -&gt; DC_Motor DC-</code></pre>
+    <p>Keep the voltage sensor across the output node so the voltage can still be measured.</p>
+    <p>At this point, the converter output supplies:</p>
+    <pre><code>Resistor load + DC motor load</code></pre>
+    <h3>11. Increase the stop time for the motor response</h3>
+    <p>Set the model stop time to:</p>
+    <pre><code>5000</code></pre>
+    <p>The longer stop time is used because the motor mechanical speed response is slower than the electrical voltage response.</p>
+    <h3>12. Run the final average buck simulation</h3>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-11-final-scope.jpg" alt="Final scope result" loading="lazy"><figcaption>Final scope result</figcaption></figure>
+    <p><em>Video screenshot: final simulation result viewed in the Scope.</em></p>
+    <figure><img src="assets/00_Create_Buck_Simscape_Average_Simplify/step-12-final-voltage-speed.jpg" alt="Final voltage and speed result" loading="lazy"><figcaption>Final voltage and speed result</figcaption></figure>
+    <p><em>Video screenshot: Simulation Data Inspector showing voltage and motor speed after the final run.</em></p>
+    <ol>
+    <li>Run the finished model.</li>
+    <li>Open Simulation Data Inspector.</li>
+    <li>Plot the output voltage signal.</li>
+    <li>Plot the motor speed signal.</li>
+    <li>Arrange the plots so voltage and speed can be reviewed together.</li>
+    </ol>
+    <p>Expected discussion:</p>
+    <ul>
+    <li>The averaged buck converter quickly produces the output voltage.</li>
+    <li>With <code>Vin = 50 V</code> and <code>Duty = 0.5</code>, the voltage is around <code>25 V</code>.</li>
+    <li>The motor speed rises more slowly because of inertia and damping.</li>
+    <li>The average converter model is useful for fast system-level studies where switching ripple is not the focus.</li>
+    </ul>
+    <h2>Suggested Instructor Flow</h2>
+    <ol>
+    <li>Open <code>Create_Buck_Simscape_Elec__Average_Simplify.slx</code>.</li>
+    <li>Review the prepared source, resistor load, duty command, sensor, and scope blocks.</li>
+    <li>Add the <code>Buck Converter</code> block.</li>
+    <li>Configure the converter as an averaged switching device.</li>
+    <li>Connect the DC source to <code>p1</code> and <code>n1</code>.</li>
+    <li>Connect <code>Constant(0.5)</code> through <code>Simulink-PS Converter</code> to the <code>G</code> port.</li>
+    <li>Connect <code>p2</code> and <code>n2</code> to the resistor load.</li>
+    <li>Connect the voltage sensor and scope.</li>
+    <li>Run and confirm about <code>25 V</code> output.</li>
+    <li>Create or open the <code>DC_Motor</code> subsystem.</li>
+    <li>Configure the DC motor, inertia, damper, speed sensor, and speed scope.</li>
+    <li>Connect <code>DC_Motor</code> in parallel with the resistor at the converter output.</li>
+    <li>Change stop time to <code>5000</code>.</li>
+    <li>Run the final simulation.</li>
+    <li>Compare output voltage and motor speed in Simulation Data Inspector.</li>
+    </ol>
+    <h2>Participant Exercise</h2>
+    <p>Ask participants to record:</p>
+    <table><thead><tr><th>Item</th><th>Expected Observation</th></tr></thead><tbody>
+    <tr><td>Input voltage</td><td><code>50 V</code></td></tr>
+    <tr><td>Duty command</td><td><code>0.5</code></td></tr>
+    <tr><td>Approximate no-motor output voltage</td><td>About <code>25 V</code></td></tr>
+    <tr><td>Output load after final connection</td><td>Resistor and DC motor in parallel</td></tr>
+    <tr><td>Motor speed behavior</td><td>Gradual rise due to inertia and damping</td></tr>
+    </tbody></table>
+    <p>Optional exercise:</p>
+    <ol>
+    <li>Change the duty command to another value such as <code>0.3</code> or <code>0.8</code>.</li>
+    <li>Run the model again.</li>
+    <li>Observe how the output voltage and motor speed change.</li>
+    </ol>
+    <h2>Troubleshooting</h2>
+    <table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead><tbody>
+    <tr><td>Converter output is zero</td><td>Duty input is not connected to <code>G</code></td><td>Connect <code>Constant -&gt; Simulink-PS Converter -&gt; G</code></td></tr>
+    <tr><td>Simscape error about missing reference</td><td>Electrical reference or solver configuration is not connected</td><td>Connect <code>Electrical Reference</code> and <code>Solver Configuration</code> to the electrical network</td></tr>
+    <tr><td>Voltage is not shown in Scope</td><td>Voltage sensor output is not connected through <code>PS-Simulink Converter</code></td><td>Connect <code>Voltage Sensor V -&gt; PS-Simulink Converter -&gt; Scope</code></td></tr>
+    <tr><td>Output voltage is not near expected average value</td><td>Duty value, source voltage, or converter parameters are different</td><td>Check <code>Vin = 50 V</code>, <code>Duty = 0.5</code>, and Buck Converter settings</td></tr>
+    <tr><td>Motor speed does not plot</td><td>Speed sensor or <code>PS-Simulink Converter1</code> is not connected</td><td>Check <code>Ideal Rotational Motion Sensor -&gt; PS-Simulink Converter1 -&gt; Scope1</code></td></tr>
+    <tr><td>Simulation too short for motor speed response</td><td>Stop time is still <code>500</code></td><td>Set stop time to <code>5000</code> for the final motor-load run</td></tr>
+    </tbody></table>
+    <h2>Reference Check</h2>
+    <p>Top-level finished model should use this structure:</p>
+    <pre><code>Constant(0.5) -&gt; Simulink-PS Converter -&gt; Buck Converter G
+DC Voltage Source -&gt; Buck Converter input p1/n1
+Buck Converter output p2/n2 -&gt; Resistor
+Buck Converter output p2/n2 -&gt; Voltage Sensor -&gt; PS-Simulink Converter -&gt; Scope
+Buck Converter output p2/n2 -&gt; DC_Motor DC+/DC-</code></pre>
+    <p><code>DC_Motor</code> subsystem should use this structure:</p>
+    <pre><code>DC+ / DC- -&gt; DC Motor electrical ports
+DC Motor shaft -&gt; Inertia and Rotational Damper
+Mechanical side -&gt; Mechanical Rotational Reference
+Ideal Rotational Motion Sensor -&gt; PS-Simulink Converter1 -&gt; Scope1</code></pre>
+    <p>Key average-switch concept:</p>
+    <pre><code>The average Buck Converter model uses duty cycle directly.
+It is faster for system-level simulation because it does not simulate every PWM switching event.</code></pre>
+  </main>
+</body>
+</html>

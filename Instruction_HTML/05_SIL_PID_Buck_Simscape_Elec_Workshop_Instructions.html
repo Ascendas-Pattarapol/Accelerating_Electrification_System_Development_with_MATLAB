@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop 05: Run SIL Simulation for the Buck Converter Controller</title>
+  <style>
+:root {
+  color-scheme: light;
+  --page: #f6f8fb;
+  --surface: #ffffff;
+  --ink: #1f2937;
+  --line: #d7dde6;
+  --accent: #0b6f8f;
+  --accent-soft: #e7f5f8;
+  --code-bg: #f0f3f7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.58;
+}
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 40px 28px 64px;
+  background: var(--surface);
+  min-height: 100vh;
+  box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.06), 0 18px 50px rgba(31, 41, 55, 0.08);
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  color: #13202f;
+  margin: 1.6em 0 0.55em;
+}
+h1 {
+  margin-top: 0;
+  padding-bottom: 0.45em;
+  border-bottom: 3px solid var(--accent);
+  font-size: 2.2rem;
+}
+h2 {
+  border-top: 1px solid var(--line);
+  padding-top: 1.15em;
+  font-size: 1.45rem;
+}
+h3 { font-size: 1.15rem; }
+p { margin: 0.75em 0; }
+ul, ol { padding-left: 1.45rem; margin: 0.7em 0 1em; }
+li { margin: 0.28em 0; }
+code {
+  background: var(--code-bg);
+  border: 1px solid #dce2ea;
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.93em;
+}
+pre {
+  overflow-x: auto;
+  background: #eef6f8;
+  color: #12313c;
+  border: 1px solid #c8d9df;
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin: 1em 0 1.25em;
+}
+pre code {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  font-size: 0.94rem;
+}
+figure {
+  margin: 1.2rem 0 1.55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 10px;
+}
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+figcaption {
+  color: #4b5563;
+  font-size: 0.92rem;
+  margin-top: 8px;
+  text-align: center;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0 1.35em;
+  font-size: 0.95rem;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  vertical-align: top;
+}
+th {
+  background: var(--accent-soft);
+  color: #12313c;
+  text-align: left;
+  font-weight: 650;
+}
+tr:nth-child(even) td { background: #fafbfd; }
+@media (max-width: 720px) {
+  main { padding: 28px 18px 48px; box-shadow: none; }
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.25rem; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Workshop 05: Run SIL Simulation for the Buck Converter Controller</h1>
+    <h2>Goal</h2>
+    <p>Run software-in-the-loop (SIL) verification for the generated C code of the buck converter voltage controller. This workshop follows the clip <code>05_SIL_PID_Buck_Simscape_Elec.mp4</code>.</p>
+    <p>Start from:</p>
+    <pre><code>SIL_PIL_PID_Buck_Simscape_Elec.slx</code></pre>
+    <p>Use the referenced controller model:</p>
+    <pre><code>Voltage_Controller_STM32.slx</code></pre>
+    <p>Use the STM32 project configuration in:</p>
+    <pre><code>Voltage_Controller_Project\</code></pre>
+    <p>There is no separate finished model for this workshop. The purpose is to show the workflow for switching the controller Model Reference into SIL mode, building/running the generated code, comparing the SIL result with model simulation, and inspecting generated-code traceability and profiling information.</p>
+    <p>By the end of this workshop, participants should be able to:</p>
+    <ul>
+    <li>Identify the controller Model Reference inside the Simscape buck converter test model.</li>
+    <li>Explain the difference between model simulation and SIL simulation.</li>
+    <li>Confirm the referenced controller model is configured for STM32 embedded C code generation.</li>
+    <li>Run the controller as generated C code in SIL mode.</li>
+    <li>Inspect generated code, traceability, and execution profiling information.</li>
+    </ul>
+    <h2>Prerequisites</h2>
+    <ul>
+    <li>MATLAB with Simulink.</li>
+    <li>Simscape and Simscape Electrical.</li>
+    <li>Embedded Coder.</li>
+    <li>STM32 support package and STM32CubeMX/STM32CubeIDE setup.</li>
+    <li>Simulink model files in <code>Simplified_Version</code>.</li>
+    <li>STM32 project folder <code>Simplified_Version\Voltage_Controller_Project</code>.</li>
+    </ul>
+    <h2>Starting Files</h2>
+    <table><thead><tr><th>File or Folder</th><th>Purpose</th></tr></thead><tbody>
+    <tr><td><code>SIL_PIL_PID_Buck_Simscape_Elec.slx</code></td><td>Top-level buck converter plant and controller reference test model</td></tr>
+    <tr><td><code>Voltage_Controller_STM32.slx</code></td><td>Referenced controller model used for code generation and SIL</td></tr>
+    <tr><td><code>Voltage_Controller_Project\</code></td><td>STM32CubeMX/STM32CubeIDE project configuration</td></tr>
+    <tr><td><code>slprj\ert\Voltage_Controller_STM32\</code></td><td>Generated Embedded Coder files</td></tr>
+    <tr><td><code>slprj\ert\Voltage_Controller_STM32\sil\</code></td><td>SIL executable and SIL build artifacts</td></tr>
+    </tbody></table>
+    <h2>Model Structure</h2>
+    <p>The top-level model contains the Simscape buck converter plant and a Model Reference block named <code>Voltage_Controller_STM32</code>.</p>
+    <p>Top-level signal flow:</p>
+    <pre><code>Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Unit Delay -&gt; Voltage_Controller_STM32 input VoltSense
+Voltage_Controller_STM32 output Duty -&gt; PWM -&gt; Simulink-PS Converter -&gt; MOSFET gate
+Current Sensor -&gt; PS-Simulink Converter -&gt; Scope input 1
+Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Scope input 2</code></pre>
+    <p>The referenced controller model contains:</p>
+    <pre><code>Inport VoltSense
+Step target -&gt; Subtract -&gt; PID Controller -&gt; Outport Duty</code></pre>
+    <p>Detected controller settings:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Step time</td><td><code>0.01 s</code></td></tr>
+    <tr><td>Step initial value</td><td><code>0</code></td></tr>
+    <tr><td>Step final value</td><td><code>40</code></td></tr>
+    <tr><td>Controller type</td><td><code>PI</code></td></tr>
+    <tr><td>Proportional gain</td><td><code>Kp</code></td></tr>
+    <tr><td>Integral gain</td><td><code>Ki</code></td></tr>
+    <tr><td>Initial <code>Kp</code></td><td><code>1</code></td></tr>
+    <tr><td>Initial <code>Ki</code></td><td><code>1</code></td></tr>
+    <tr><td>Controller sample time</td><td><code>1e-4 s</code></td></tr>
+    <tr><td>Output lower saturation</td><td><code>0</code></td></tr>
+    <tr><td>Output upper saturation</td><td><code>1</code></td></tr>
+    </tbody></table>
+    <h2>Reference Configuration</h2>
+    <p>Top-level model settings:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Model</td><td><code>SIL_PIL_PID_Buck_Simscape_Elec.slx</code></td></tr>
+    <tr><td>Simulation mode</td><td><code>accelerator</code></td></tr>
+    <tr><td>Stop time</td><td><code>0.2 s</code></td></tr>
+    <tr><td>Code execution profiling</td><td><code>on</code></td></tr>
+    <tr><td>Profiling variable</td><td><code>executionProfile</code></td></tr>
+    </tbody></table>
+    <p>Referenced controller model settings:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Model</td><td><code>Voltage_Controller_STM32.slx</code></td></tr>
+    <tr><td>Solver type</td><td>Fixed-step</td></tr>
+    <tr><td>Solver</td><td><code>FixedStepAuto</code></td></tr>
+    <tr><td>Fixed-step size</td><td><code>0.0001</code></td></tr>
+    <tr><td>System target file</td><td><code>ert.tlc</code></td></tr>
+    <tr><td>Language</td><td><code>C</code></td></tr>
+    <tr><td>Code interface packaging</td><td>Nonreusable function</td></tr>
+    <tr><td>Hardware board</td><td><code>STM32G4xx Based</code></td></tr>
+    <tr><td>Production hardware</td><td><code>ARM Compatible -&gt; ARM Cortex-M</code></td></tr>
+    <tr><td>Code generation report</td><td><code>on</code></td></tr>
+    <tr><td>Traceability</td><td><code>on</code></td></tr>
+    </tbody></table>
+    <p>STM32 project details detected from <code>Voltage_Controller_Project.ioc</code>:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Project name</td><td><code>Voltage_Controller_Project</code></td></tr>
+    <tr><td>Board</td><td><code>B-G474E-DPOW1</code></td></tr>
+    <tr><td>MCU</td><td><code>STM32G474R(B-C-E)Tx</code></td></tr>
+    <tr><td>Package</td><td><code>LQFP64</code></td></tr>
+    <tr><td>STM32CubeMX version</td><td><code>6.12.0</code></td></tr>
+    <tr><td>Firmware package</td><td><code>STM32Cube FW_G4 V1.6.0</code></td></tr>
+    <tr><td>Target toolchain</td><td><code>STM32CubeIDE</code></td></tr>
+    <tr><td>Time base</td><td><code>TIM2_IRQn</code></td></tr>
+    <tr><td>USART3 frequency</td><td><code>170000000</code></td></tr>
+    </tbody></table>
+    <h2>Workshop Procedure</h2>
+    <p>Follow this order in the workshop:</p>
+    <pre><code>Open top model -&gt; Review Model Reference -&gt; Run model simulation
+-&gt; Open controller reference -&gt; Review STM32/code generation settings
+-&gt; Review STM32 project folder -&gt; Switch Model Reference to SIL
+-&gt; Run SIL simulation -&gt; Compare results -&gt; Inspect generated code
+-&gt; Inspect profiling/analyzer output</code></pre>
+    <h3>1. Open the SIL/PIL top model</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-01-open-top-model.jpg" alt="Open SIL/PIL top model" loading="lazy"><figcaption>Open SIL/PIL top model</figcaption></figure>
+    <p>*Video screenshot: top-level buck converter model with the <code>Voltage_Controller_STM32</code> Model Reference block.*</p>
+    <ol>
+    <li>Open:</li>
+    </ol>
+    <pre><code>   SIL_PIL_PID_Buck_Simscape_Elec.slx</code></pre>
+    <ol>
+    <li>Locate the Model Reference block:</li>
+    </ol>
+    <pre><code>   Voltage_Controller_STM32</code></pre>
+    <ol>
+    <li>Confirm the block input is <code>VoltSense</code>.</li>
+    <li>Confirm the block output is <code>Duty</code>.</li>
+    <li>Confirm <code>Duty</code> connects to the <code>PWM</code> block.</li>
+    </ol>
+    <h3>2. Review the closed-loop plant and controller boundary</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-02-controller-boundary.jpg" alt="Controller boundary" loading="lazy"><figcaption>Controller boundary</figcaption></figure>
+    <p><em>Video screenshot: controller reference separated from the Simscape buck converter plant.</em></p>
+    <p>Explain the separation:</p>
+    <pre><code>Plant: Simscape buck converter, PWM, MOSFET, sensors
+Controller: Voltage_Controller_STM32 referenced model</code></pre>
+    <p>The plant remains simulated in Simulink/Simscape. The controller can be run either as model behavior or as generated code.</p>
+    <h3>3. Run a baseline model simulation</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-03-baseline-result.jpg" alt="Baseline model simulation" loading="lazy"><figcaption>Baseline model simulation</figcaption></figure>
+    <p><em>Video screenshot: baseline response before switching the controller reference into SIL mode.</em></p>
+    <ol>
+    <li>Keep the Model Reference in normal/model simulation mode if the clip starts from a baseline check.</li>
+    <li>Run the model.</li>
+    <li>Open the Scope or Simulation Data Inspector.</li>
+    <li>Confirm the output voltage tracks the target near <code>40 V</code>.</li>
+    <li>Use this run as the reference behavior before SIL.</li>
+    </ol>
+    <p>This step confirms the model reference is connected correctly before switching to generated-code execution.</p>
+    <h3>4. Open the controller reference model</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-04-controller-reference.jpg" alt="Controller reference model" loading="lazy"><figcaption>Controller reference model</figcaption></figure>
+    <p>*Video screenshot: <code>Voltage_Controller_STM32</code> reference model with <code>VoltSense</code> input and <code>Duty</code> output.*</p>
+    <ol>
+    <li>Open:</li>
+    </ol>
+    <pre><code>   Voltage_Controller_STM32.slx</code></pre>
+    <ol>
+    <li>Review the controller interface:</li>
+    </ol>
+    <ul>
+    <li>Inport: <code>VoltSense</code></li>
+    <li>Outport: <code>Duty</code></li>
+    </ul>
+    <ol>
+    <li>Review the control logic:</li>
+    </ol>
+    <pre><code>   Step target -&gt; Subtract -&gt; PID Controller -&gt; Duty</code></pre>
+    <ol>
+    <li>Confirm the PID controller uses <code>Kp</code> and <code>Ki</code>.</li>
+    <li>Confirm output saturation limits duty to the <code>0</code> to <code>1</code> range.</li>
+    </ol>
+    <h3>5. Review code generation settings</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-05-code-generation-settings.jpg" alt="Code generation settings" loading="lazy"><figcaption>Code generation settings</figcaption></figure>
+    <p><em>Video screenshot: model settings for embedded code generation and STM32 target configuration.</em></p>
+    <p>Open Model Settings for <code>Voltage_Controller_STM32.slx</code>.</p>
+    <p>Confirm solver settings:</p>
+    <pre><code>Solver type = Fixed-step
+Solver = FixedStepAuto
+Fixed-step size = 0.0001</code></pre>
+    <p>Confirm code generation settings:</p>
+    <pre><code>System target file = ert.tlc
+Language = C
+Code interface packaging = Nonreusable function
+Hardware board = STM32G4xx Based
+Production hardware = ARM Compatible -&gt; ARM Cortex-M</code></pre>
+    <p>Confirm reporting and traceability are enabled:</p>
+    <pre><code>Create code generation report = on
+Traceability = on</code></pre>
+    <h3>6. Review the STM32 project configuration</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-06-stm32-project.jpg" alt="STM32 project configuration" loading="lazy"><figcaption>STM32 project configuration</figcaption></figure>
+    <p><em>Video screenshot: STM32CubeMX project configuration associated with the controller model.</em></p>
+    <p>Open or review:</p>
+    <pre><code>Voltage_Controller_Project\Voltage_Controller_Project.ioc</code></pre>
+    <p>Use this section to show that the generated embedded project is associated with the STM32 target configuration.</p>
+    <p>Key points to mention:</p>
+    <ul>
+    <li>Board: <code>B-G474E-DPOW1</code>.</li>
+    <li>MCU: <code>STM32G474R(B-C-E)Tx</code>.</li>
+    <li>Toolchain: <code>STM32CubeIDE</code>.</li>
+    <li>Firmware package: <code>STM32Cube FW_G4 V1.6.0</code>.</li>
+    <li>Project folder is already prepared for this workshop.</li>
+    </ul>
+    <p>If STM32CubeMX opens during the video flow, use it only to review the project configuration. Do not change hardware settings during the SIL lesson unless required by the local setup.</p>
+    <h3>7. Build or confirm generated code</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-07-generated-code.jpg" alt="Generated code artifacts" loading="lazy"><figcaption>Generated code artifacts</figcaption></figure>
+    <p>*Video screenshot: generated code/build artifacts created for <code>Voltage_Controller_STM32</code>.*</p>
+    <ol>
+    <li>Build the referenced model or let the SIL workflow build it automatically.</li>
+    <li>Confirm generated code exists under:</li>
+    </ol>
+    <pre><code>   slprj\ert\Voltage_Controller_STM32</code></pre>
+    <ol>
+    <li>Important generated files include:</li>
+    </ol>
+    <pre><code>   Voltage_Controller_STM32.c
+   Voltage_Controller_STM32.h
+   codedescriptor.dmr
+   buildInfo.mat</code></pre>
+    <ol>
+    <li>SIL build artifacts are stored under:</li>
+    </ol>
+    <pre><code>   slprj\ert\Voltage_Controller_STM32\sil</code></pre>
+    <ol>
+    <li>Confirm the SIL executable is available:</li>
+    </ol>
+    <pre><code>   Voltage_Controller_STM32.exe</code></pre>
+    <h3>8. Switch the Model Reference to SIL mode</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-08-switch-sil-mode.jpg" alt="Switch to SIL mode" loading="lazy"><figcaption>Switch to SIL mode</figcaption></figure>
+    <p>*Video screenshot: selecting <code>Software-in-the-loop (SIL)</code> for the controller Model Reference block.*</p>
+    <ol>
+    <li>Return to:</li>
+    </ol>
+    <pre><code>   SIL_PIL_PID_Buck_Simscape_Elec.slx</code></pre>
+    <ol>
+    <li>Select the <code>Voltage_Controller_STM32</code> Model Reference block.</li>
+    <li>Open the model reference simulation mode menu.</li>
+    <li>Select:</li>
+    </ol>
+    <pre><code>   Software-in-the-loop (SIL)</code></pre>
+    <p>Important note:</p>
+    <pre><code>The saved model may show Processor-in-the-loop (PIL) because Workshop 06 continues from this model.
+For Workshop 05, select and demonstrate SIL first.</code></pre>
+    <h3>9. Run SIL simulation</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-09-run-sil.jpg" alt="Run SIL simulation" loading="lazy"><figcaption>Run SIL simulation</figcaption></figure>
+    <p><em>Video screenshot: running the top-level model with the controller executed as generated SIL code.</em></p>
+    <ol>
+    <li>Run the top-level model.</li>
+    <li>Let Simulink build or reuse the generated controller code.</li>
+    <li>During SIL, the controller behavior is executed from compiled generated C code on the host.</li>
+    <li>The Simscape plant still runs in the top-level simulation.</li>
+    <li>Open the Scope or Simulation Data Inspector.</li>
+    <li>Confirm the voltage and current responses are consistent with the baseline model simulation.</li>
+    </ol>
+    <p>Expected result:</p>
+    <pre><code>SIL behavior should closely match the model-level controller behavior.</code></pre>
+    <h3>10. Compare SIL result with model simulation</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-10-compare-results.jpg" alt="Compare SIL results" loading="lazy"><figcaption>Compare SIL results</figcaption></figure>
+    <p><em>Video screenshot: Simulation Data Inspector comparison after the SIL run.</em></p>
+    <p>Use Simulation Data Inspector or Scope results to compare:</p>
+    <table><thead><tr><th>Case</th><th>Controller Execution</th></tr></thead><tbody>
+    <tr><td>Baseline/MIL-style run</td><td>Simulink referenced model behavior</td></tr>
+    <tr><td>SIL run</td><td>Generated C code compiled and executed on the host</td></tr>
+    </tbody></table>
+    <p>Check:</p>
+    <ul>
+    <li>Output voltage reaches near <code>40 V</code>.</li>
+    <li>Current response remains reasonable.</li>
+    <li>No code generation or SIL runtime errors occur.</li>
+    <li>Controller duty output remains bounded through saturation.</li>
+    </ul>
+    <h3>11. Open generated code report</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-11-code-report.jpg" alt="Generated code report" loading="lazy"><figcaption>Generated code report</figcaption></figure>
+    <p><em>Video screenshot: generated code report for the controller reference model.</em></p>
+    <ol>
+    <li>Open the generated code report for <code>Voltage_Controller_STM32</code>.</li>
+    <li>Review:</li>
+    </ol>
+    <ul>
+    <li>Generated C file.</li>
+    <li>Generated header file.</li>
+    <li>Model interface.</li>
+    <li>Entry-point functions.</li>
+    <li>Traceability links.</li>
+    </ul>
+    <p>Use the report to explain that SIL is executing code generated from the same referenced controller model.</p>
+    <h3>12. Demonstrate model-to-code traceability</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-12-model-to-code.jpg" alt="Model-to-code traceability" loading="lazy"><figcaption>Model-to-code traceability</figcaption></figure>
+    <p><em>Video screenshot: navigating from model elements to generated C code.</em></p>
+    <ol>
+    <li>Select a model element such as:</li>
+    </ol>
+    <ul>
+    <li><code>Step</code></li>
+    <li><code>Subtract</code></li>
+    <li><code>PID Controller</code></li>
+    <li><code>Duty</code> Outport</li>
+    </ul>
+    <ol>
+    <li>Navigate from the model to the generated C code.</li>
+    <li>Point out code sections that compute:</li>
+    </ol>
+    <ul>
+    <li>Voltage error.</li>
+    <li>PI controller output.</li>
+    <li>Duty saturation.</li>
+    </ul>
+    <p>Example concept:</p>
+    <pre><code>VoltSense input -&gt; error calculation -&gt; PI controller -&gt; saturated Duty output</code></pre>
+    <h3>13. Demonstrate code-to-model traceability</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-13-code-to-model.jpg" alt="Code-to-model traceability" loading="lazy"><figcaption>Code-to-model traceability</figcaption></figure>
+    <p><em>Video screenshot: navigating from generated C code back to the Simulink model.</em></p>
+    <ol>
+    <li>Select a line in the generated C code.</li>
+    <li>Navigate back to the corresponding Simulink block.</li>
+    <li>Explain that traceability helps review generated embedded code and supports debugging or code review.</li>
+    </ol>
+    <h3>14. Inspect code execution profiling</h3>
+    <figure><img src="assets/05_SIL_PID_Buck_Simscape_Elec/step-14-profiling.jpg" alt="Code execution profiling" loading="lazy"><figcaption>Code execution profiling</figcaption></figure>
+    <p><em>Video screenshot: code execution profiling/analyzer results after SIL verification.</em></p>
+    <ol>
+    <li>Confirm code execution profiling is enabled in the top model.</li>
+    <li>Run or reuse the SIL run.</li>
+    <li>Open the execution profiling or code execution analyzer view.</li>
+    <li>Inspect timing results for the generated controller code.</li>
+    </ol>
+    <p>Use this discussion:</p>
+    <ul>
+    <li>SIL can verify generated-code behavior before hardware is involved.</li>
+    <li>Profiling gives an estimate of generated-code execution cost.</li>
+    <li>This is useful before moving to processor-in-the-loop (PIL) in the next workshop.</li>
+    </ul>
+    <h2>Suggested Instructor Flow</h2>
+    <ol>
+    <li>Open <code>SIL_PIL_PID_Buck_Simscape_Elec.slx</code>.</li>
+    <li>Identify the <code>Voltage_Controller_STM32</code> Model Reference block.</li>
+    <li>Run or show the baseline model simulation result.</li>
+    <li>Open <code>Voltage_Controller_STM32.slx</code> and review its controller interface.</li>
+    <li>Review solver, code generation, STM32 target, report, and traceability settings.</li>
+    <li>Show the prepared <code>Voltage_Controller_Project</code> folder and <code>.ioc</code> project.</li>
+    <li>Build or confirm generated code for the controller reference model.</li>
+    <li>Switch the Model Reference simulation mode to <code>Software-in-the-loop (SIL)</code>.</li>
+    <li>Run the top-level SIL simulation.</li>
+    <li>Compare SIL output voltage/current with the baseline run.</li>
+    <li>Open the generated code report.</li>
+    <li>Demonstrate model-to-code and code-to-model traceability.</li>
+    <li>Open the execution profiling/analyzer view.</li>
+    <li>Conclude by explaining that Workshop 06 moves from host-based SIL to processor-in-the-loop.</li>
+    </ol>
+    <h2>Participant Exercise</h2>
+    <p>Ask participants to compare these two runs:</p>
+    <table><thead><tr><th>Case</th><th>Controller Execution</th><th>Expected Result</th></tr></thead><tbody>
+    <tr><td>Baseline</td><td>Simulink Model Reference behavior</td><td>Reference controller response</td></tr>
+    <tr><td>SIL</td><td>Generated C code on host</td><td>Should closely match baseline</td></tr>
+    </tbody></table>
+    <p>For each case, record:</p>
+    <ul>
+    <li>Final output voltage.</li>
+    <li>Current response shape.</li>
+    <li>Whether the run completed without errors.</li>
+    <li>Generated code folder location.</li>
+    <li>One example of model-to-code traceability.</li>
+    <li>One profiling result or execution metric if available.</li>
+    </ul>
+    <h2>Troubleshooting</h2>
+    <table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead><tbody>
+    <tr><td>SIL option is unavailable</td><td>Referenced model is not configured for code generation</td><td>Check <code>ert.tlc</code>, fixed-step solver, and code generation settings</td></tr>
+    <tr><td>Build fails because <code>Kp</code> or <code>Ki</code> is undefined</td><td>Controller gains are not visible to the referenced model</td><td>Define <code>Kp</code> and <code>Ki</code> in a visible workspace or model workspace</td></tr>
+    <tr><td>Build cannot find STM32 resources</td><td>STM32 project or support package path is not configured</td><td>Check <code>Voltage_Controller_Project</code>, STM32CubeMX, STM32CubeIDE, and firmware package setup</td></tr>
+    <tr><td>SIL run differs from baseline</td><td>Sample time, initialization, or parameter mismatch</td><td>Check Step settings, PID sample time, <code>Kp</code>, <code>Ki</code>, and saturation</td></tr>
+    <tr><td>Generated code report has no trace links</td><td>Traceability/report settings are disabled</td><td>Enable code generation report and traceability in <code>Voltage_Controller_STM32.slx</code></td></tr>
+    <tr><td>Profiling data is missing</td><td>Code execution profiling is disabled or run was not instrumented</td><td>Enable profiling and rerun SIL</td></tr>
+    <tr><td>Model opens in PIL mode</td><td>Model was saved after Workshop 06 setup</td><td>Change the Model Reference simulation mode back to <code>Software-in-the-loop (SIL)</code> for this workshop</td></tr>
+    </tbody></table>
+    <h2>Reference Check</h2>
+    <p>Top-level model should use this structure:</p>
+    <pre><code>Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Unit Delay -&gt; Voltage_Controller_STM32.VoltSense
+Voltage_Controller_STM32.Duty -&gt; PWM -&gt; Simulink-PS Converter -&gt; MOSFET gate
+Simscape buck converter plant remains in the top model</code></pre>
+    <p>Referenced model should use this structure:</p>
+    <pre><code>VoltSense -&gt; Subtract negative input
+Step target -&gt; Subtract positive input
+Subtract -&gt; PID Controller(P=Kp, I=Ki) -&gt; Duty</code></pre>
+    <p>Generated-code artifacts should exist under:</p>
+    <pre><code>slprj\ert\Voltage_Controller_STM32
+slprj\ert\Voltage_Controller_STM32\sil</code></pre>
+    <p>Key SIL concept:</p>
+    <pre><code>The plant is still simulated in Simulink/Simscape.
+Only the controller reference is replaced by compiled generated C code.</code></pre>
+  </main>
+</body>
+</html>
+

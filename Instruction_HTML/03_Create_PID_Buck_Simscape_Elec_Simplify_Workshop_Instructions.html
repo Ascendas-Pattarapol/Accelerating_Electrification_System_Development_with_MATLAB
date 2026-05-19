@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop 03: Add a PI Controller to the Simplified Buck Converter</title>
+  <style>
+:root {
+  color-scheme: light;
+  --page: #f6f8fb;
+  --surface: #ffffff;
+  --ink: #1f2937;
+  --line: #d7dde6;
+  --accent: #0b6f8f;
+  --accent-soft: #e7f5f8;
+  --code-bg: #f0f3f7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.58;
+}
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 40px 28px 64px;
+  background: var(--surface);
+  min-height: 100vh;
+  box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.06), 0 18px 50px rgba(31, 41, 55, 0.08);
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  color: #13202f;
+  margin: 1.6em 0 0.55em;
+}
+h1 {
+  margin-top: 0;
+  padding-bottom: 0.45em;
+  border-bottom: 3px solid var(--accent);
+  font-size: 2.2rem;
+}
+h2 {
+  border-top: 1px solid var(--line);
+  padding-top: 1.15em;
+  font-size: 1.45rem;
+}
+h3 { font-size: 1.15rem; }
+p { margin: 0.75em 0; }
+ul, ol { padding-left: 1.45rem; margin: 0.7em 0 1em; }
+li { margin: 0.28em 0; }
+code {
+  background: var(--code-bg);
+  border: 1px solid #dce2ea;
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.93em;
+}
+pre {
+  overflow-x: auto;
+  background: #eef6f8;
+  color: #12313c;
+  border: 1px solid #c8d9df;
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin: 1em 0 1.25em;
+}
+pre code {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  font-size: 0.94rem;
+}
+figure {
+  margin: 1.2rem 0 1.55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 10px;
+}
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+figcaption {
+  color: #4b5563;
+  font-size: 0.92rem;
+  margin-top: 8px;
+  text-align: center;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0 1.35em;
+  font-size: 0.95rem;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  vertical-align: top;
+}
+th {
+  background: var(--accent-soft);
+  color: #12313c;
+  text-align: left;
+  font-weight: 650;
+}
+tr:nth-child(even) td { background: #fafbfd; }
+@media (max-width: 720px) {
+  main { padding: 28px 18px 48px; box-shadow: none; }
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.25rem; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Workshop 03: Add a PI Controller to the Simplified Buck Converter</h1>
+    <h2>Goal</h2>
+    <p>Complete a closed-loop voltage controller for the simplified Simscape buck converter. This workshop follows the clip <code>03_Create_PID_Buck_Simscape_Elec_Simplify.mp4</code>.</p>
+    <p>Start from:</p>
+    <pre><code>Create_PID_Buck_Simscape_Elec_Simplify.slx</code></pre>
+    <p>Finish with a model that matches:</p>
+    <pre><code>Create_PID_Buck_Simscape_Elec_Simplify_finished.slx</code></pre>
+    <p>The starting model already contains the buck converter plant, output voltage feedback, target voltage, and error calculation. In this clip, participants add the missing PI controller, connect it to the PWM duty input, tune the gains, and validate the closed-loop voltage response.</p>
+    <p>By the end of this workshop, participants should be able to:</p>
+    <ul>
+    <li>Explain why fixed-duty open-loop control is not enough for voltage regulation.</li>
+    <li>Identify the prepared feedback path in the simplified PID model.</li>
+    <li>Add a <code>PID Controller</code> block as a PI controller.</li>
+    <li>Limit the controller output so PWM duty stays between <code>0</code> and <code>1</code>.</li>
+    <li>Connect the error signal to the controller and the controller output to the PWM block.</li>
+    <li>Tune and validate the closed-loop buck converter response.</li>
+    </ul>
+    <h2>Prerequisites</h2>
+    <ul>
+    <li>MATLAB with Simulink.</li>
+    <li>Simscape.</li>
+    <li>Simscape Electrical.</li>
+    <li>Basic understanding of the simplified buck converter from Workshop 01.</li>
+    <li>Basic understanding of feedback control: target, measured output, error, controller, actuator.</li>
+    </ul>
+    <h2>Starting Model</h2>
+    <p>Open <code>Create_PID_Buck_Simscape_Elec_Simplify.slx</code>.</p>
+    <p>The model already includes:</p>
+    <table><thead><tr><th>Existing Block</th><th>Purpose</th></tr></thead><tbody>
+    <tr><td><code>DC Voltage Source</code></td><td>Provides the input voltage</td></tr>
+    <tr><td><code>MOSFET (Ideal, Switching)</code></td><td>Switching device</td></tr>
+    <tr><td><code>Diode</code></td><td>Freewheeling path</td></tr>
+    <tr><td><code>Inductor</code>, <code>Capacitor</code>, <code>Resistor</code></td><td>Buck converter output stage and load</td></tr>
+    <tr><td><code>Current Sensor</code></td><td>Measures output/load current</td></tr>
+    <tr><td><code>Voltage Sensor</code></td><td>Measures output voltage</td></tr>
+    <tr><td><code>PS-Simulink Converter</code> blocks</td><td>Convert physical sensor signals to Simulink signals</td></tr>
+    <tr><td><code>Scope</code></td><td>Displays current and voltage</td></tr>
+    <tr><td><code>Target</code></td><td>Provides the desired output voltage</td></tr>
+    <tr><td><code>Subtract</code></td><td>Calculates voltage error</td></tr>
+    <tr><td><code>Unit Delay</code></td><td>Provides delayed measured-voltage feedback</td></tr>
+    <tr><td><code>PWM</code></td><td>Converts duty command into a PWM signal</td></tr>
+    <tr><td><code>Simulink-PS Converter</code></td><td>Converts PWM into a physical gate signal</td></tr>
+    <tr><td><code>Electrical Reference</code> and <code>Solver Configuration</code></td><td>Required Simscape infrastructure</td></tr>
+    </tbody></table>
+    <p>The starting model is intentionally incomplete: the PWM input is not driven by a controller yet.</p>
+    <h2>Reference Values</h2>
+    <p>Use these values during the workshop:</p>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>DC input voltage</td><td><code>50 V</code></td></tr>
+    <tr><td>Output voltage target</td><td><code>40 V</code></td></tr>
+    <tr><td>PWM period</td><td><code>1e-5 s</code></td></tr>
+    <tr><td>Controller type</td><td><code>PI</code></td></tr>
+    <tr><td>Controller form</td><td><code>Parallel</code></td></tr>
+    <tr><td>Controller time domain</td><td>Discrete-time</td></tr>
+    <tr><td>Controller sample time</td><td><code>1e-4 s</code></td></tr>
+    <tr><td>Proportional gain <code>P</code></td><td><code>0.0244696968424815</code></td></tr>
+    <tr><td>Integral gain <code>I</code></td><td><code>23.7511768764149</code></td></tr>
+    <tr><td>Derivative gain <code>D</code></td><td><code>0</code></td></tr>
+    <tr><td>Output lower saturation</td><td><code>0</code></td></tr>
+    <tr><td>Output upper saturation</td><td><code>1</code></td></tr>
+    <tr><td>Simulation stop time</td><td><code>0.5 s</code></td></tr>
+    </tbody></table>
+    <p>The controller output is the PWM duty command, so it must stay in the valid range:</p>
+    <pre><code>0 &lt;= Duty &lt;= 1</code></pre>
+    <h2>Workshop Procedure</h2>
+    <p>Follow this order in the workshop:</p>
+    <pre><code>Review prepared model -&gt; Explain feedback loop -&gt; Add PI controller
+-&gt; Configure controller -&gt; Connect controller to PWM -&gt; Estimate plant
+-&gt; Tune with PID Tuner sliders -&gt; Simulate -&gt; Save completed model</code></pre>
+    <h3>1. Open and review the prepared PID model</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/vlcsnap-2026-05-19-00h54m05s321.png" alt="Prepared PID model" loading="lazy"><figcaption>Prepared PID model</figcaption></figure>
+    <p><em>Video screenshot: prepared simplified buck converter model with target, feedback, and open PWM input.</em></p>
+    <ol>
+    <li>Open <code>Create_PID_Buck_Simscape_Elec_Simplify.slx</code>.</li>
+    <li>Confirm that the buck converter electrical plant is already complete.</li>
+    <li>Confirm the <code>Target</code> block is set to:</li>
+    </ol>
+    <pre><code>   40</code></pre>
+    <ol>
+    <li>Confirm the <code>Voltage Sensor</code> output is converted by <code>PS-Simulink Converter1</code>.</li>
+    <li>Confirm the voltage signal is routed to:</li>
+    </ol>
+    <ul>
+    <li>Scope input 2.</li>
+    <li><code>Unit Delay</code>.</li>
+    </ul>
+    <ol>
+    <li>Confirm <code>Target</code> and delayed voltage feedback connect to <code>Subtract</code>.</li>
+    <li>Observe that the <code>Subtract</code> output is the voltage error:</li>
+    </ol>
+    <pre><code>   error = Vtarget - Vout</code></pre>
+    <ol>
+    <li>Observe that the <code>PWM</code> block input is still open.</li>
+    </ol>
+    <h3>2. Explain the closed-loop control path</h3>
+    <p>Explain the intended signal flow:</p>
+    <pre><code>Target voltage -&gt; Subtract -&gt; PI Controller -&gt; PWM -&gt; MOSFET gate
+Measured output voltage -&gt; Unit Delay -&gt; Subtract feedback input</code></pre>
+    <p>The controller adjusts duty cycle automatically. If output voltage is below the <code>40 V</code> target, the error becomes positive and the PI controller increases duty cycle. If output voltage is too high, the controller reduces duty cycle.</p>
+    <h3>3. Add the PID Controller block</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/vlcsnap-2026-05-19-00h55m22s280.png" alt="PID Controller block added" loading="lazy"><figcaption>PID Controller block added</figcaption></figure>
+    <p><em>Video screenshot: adding the PID Controller block between error and PWM.</em></p>
+    <ol>
+    <li>Add a <code>PID Controller</code> block near the <code>Subtract</code> and <code>PWM</code> blocks.</li>
+    <li>Rename it <code>PID Controller</code> if needed.</li>
+    <li>Place it between the <code>Subtract</code> output and the <code>PWM</code> input.</li>
+    </ol>
+    <p>The controller block will convert voltage error into duty-cycle command.</p>
+    <h3>4. Configure the PID Controller as PI</h3>
+    <ol>
+    <li>Open the <code>PID Controller</code> block parameters.</li>
+    <li>Set the controller type to:</li>
+    </ol>
+    <pre><code>   PI</code></pre>
+    <ol>
+    <li>Set the form to:</li>
+    </ol>
+    <pre><code>   Parallel</code></pre>
+    <ol>
+    <li>Set the time domain to:</li>
+    </ol>
+    <pre><code>   Discrete-time</code></pre>
+    <ol>
+    <li>Set the sample time:</li>
+    </ol>
+    <pre><code>   1e-4</code></pre>
+    <h3>5. Enter initial PI settings</h3>
+    <p>Enter simple initial gains so the controller block is valid before tuning:</p>
+    <pre><code>P = 1
+I = 1
+D = 0
+N = 100</code></pre>
+    <p>These initial values are only a starting point. The final gains will be calculated with PID Tuner after estimating a plant from the Simscape model.</p>
+    <h3>6. Enable controller output saturation</h3>
+    <ol>
+    <li>In the <code>PID Controller</code> block, enable output saturation.</li>
+    <li>Set the saturation limits:</li>
+    </ol>
+    <pre><code>   Lower saturation limit = 0
+   Upper saturation limit = 1</code></pre>
+    <ol>
+    <li>Keep anti-windup mode as:</li>
+    </ol>
+    <pre><code>   none</code></pre>
+    <p>The saturation limits are required because the PWM duty command cannot be less than <code>0</code> or greater than <code>1</code>.</p>
+    <h3>7. Connect the controller</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/step-07-connect-controller.jpg" alt="Controller connected to PWM" loading="lazy"><figcaption>Controller connected to PWM</figcaption></figure>
+    <p><em>Video screenshot: PI controller output connected to the PWM duty input.</em></p>
+    <ol>
+    <li>Connect the <code>Subtract</code> output to the <code>PID Controller</code> input.</li>
+    <li>Name this signal:</li>
+    </ol>
+    <pre><code>   error</code></pre>
+    <ol>
+    <li>Connect the <code>PID Controller</code> output to the <code>PWM</code> input.</li>
+    <li>Name this signal:</li>
+    </ol>
+    <pre><code>   Duty</code></pre>
+    <ol>
+    <li>Confirm the existing path remains connected:</li>
+    </ol>
+    <pre><code>   PWM -&gt; Simulink-PS Converter -&gt; MOSFET gate</code></pre>
+    <h3>8. Check the Scope signals</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/step-08-scope-signals.jpg" alt="Scope signal check" loading="lazy"><figcaption>Scope signal check</figcaption></figure>
+    <p><em>Video screenshot: checking current and voltage signals before tuning.</em></p>
+    <ol>
+    <li>Confirm Scope input 1 receives output current.</li>
+    <li>Confirm Scope input 2 receives output voltage.</li>
+    <li>Confirm the voltage signal is also used for feedback through the <code>Unit Delay</code>.</li>
+    </ol>
+    <p>Suggested Scope signal order:</p>
+    <pre><code>Scope input 1: Output current
+Scope input 2: Output voltage</code></pre>
+    <h3>9. Open PID Tuner and estimate a plant</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/step-09-estimate-plant.jpg" alt="PID Tuner plant estimation" loading="lazy"><figcaption>PID Tuner plant estimation</figcaption></figure>
+    <p><em>Video screenshot: PID Tuner estimating a plant by simulating and linearizing the Simscape model.</em></p>
+    <ol>
+    <li>Open the <code>PID Controller</code> block.</li>
+    <li>Click <code>Tune</code>.</li>
+    <li>In PID Tuner, use the plant estimation or plant linearization workflow.</li>
+    <li>Choose to estimate a new plant by linearizing the Simulink model.</li>
+    <li>Use the prepared closed-loop model signals:</li>
+    </ol>
+    <pre><code>   Plant input: duty command entering the PWM block
+   Plant output: measured output voltage from PS-Simulink Converter1</code></pre>
+    <ol>
+    <li>Linearize the model at an operating point near the nominal converter condition:</li>
+    </ol>
+    <pre><code>   Target voltage = 40 V
+   Nominal duty region = around 0.8</code></pre>
+    <ol>
+    <li>Create or update the plant model in PID Tuner.</li>
+    </ol>
+    <p>The buck converter is a nonlinear switching Simscape model. PID Tuner needs a linear plant approximation, so this step estimates a local linear plant around the selected operating point.</p>
+    <h3>10. Tune the PI response with PID Tuner</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/step-10-tune-sliders.jpg" alt="PID Tuner slider tuning" loading="lazy"><figcaption>PID Tuner slider tuning</figcaption></figure>
+    <p><em>Video screenshot: tuning the PI response using the PID Tuner response and transient-behavior controls.</em></p>
+    <ol>
+    <li>Keep the controller type as <code>PI</code>.</li>
+    <li>Use the PID Tuner response sliders to adjust the controller:</li>
+    </ol>
+    <ul>
+    <li>Move the response-time slider to make the response faster or slower.</li>
+    <li>Move the transient-behavior slider to make the response more aggressive or more robust.</li>
+    </ul>
+    <ol>
+    <li>Watch the reference-tracking plot while adjusting the sliders.</li>
+    <li>Aim for:</li>
+    </ol>
+    <ul>
+    <li>Stable response.</li>
+    <li>Output voltage tracking near <code>40 V</code>.</li>
+    <li>Reasonable rise and settling behavior.</li>
+    <li>No excessive oscillation.</li>
+    <li>Duty command remaining within the valid <code>0</code> to <code>1</code> range.</li>
+    </ul>
+    <ol>
+    <li>Apply the tuned controller back to the Simulink model.</li>
+    </ol>
+    <p>The finished model uses these tuned PI gains:</p>
+    <pre><code>P = 0.0244696968424815
+I = 23.7511768764149
+D = 0
+N = 100</code></pre>
+    <p>The exact values can vary slightly depending on the operating point and slider positions, but the final model should use the tuned PI controller from PID Tuner.</p>
+    <h3>11. Configure, simulate, and save the model</h3>
+    <figure><img src="assets/03_Create_PID_Buck_Simscape_Elec_Simplify/step-11-final-response.jpg" alt="Final tuned response" loading="lazy"><figcaption>Final tuned response</figcaption></figure>
+    <p><em>Video screenshot: final simulation response after applying the tuned PI controller.</em></p>
+    <ol>
+    <li>Set the simulation stop time to:</li>
+    </ol>
+    <pre><code>   0.5</code></pre>
+    <ol>
+    <li>Run the model.</li>
+    <li>Open the Scope.</li>
+    <li>Confirm the output voltage moves toward the <code>40 V</code> target.</li>
+    <li>Confirm the current response is reasonable and the simulation completes without duty-cycle errors.</li>
+    <li>Save the completed model.</li>
+    <li>Open the provided finished model if you want to compare:</li>
+    </ol>
+    <pre><code>   Create_PID_Buck_Simscape_Elec_Simplify_finished.slx</code></pre>
+    <ol>
+    <li>Confirm the completed model has this control path:</li>
+    </ol>
+    <pre><code>   Target -&gt; Subtract -&gt; PID Controller -&gt; PWM
+   Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Unit Delay -&gt; Subtract</code></pre>
+    <h2>Control Discussion</h2>
+    <p>Use the result to explain the control improvement:</p>
+    <ul>
+    <li>Open-loop fixed duty uses a constant duty command and cannot correct tracking error.</li>
+    <li>Closed-loop PI control uses measured output voltage feedback.</li>
+    <li>The PI controller adjusts duty to reduce the error between <code>Target</code> and measured output voltage.</li>
+    <li>Saturation keeps the requested duty command physically valid for the PWM block.</li>
+    <li>PID Tuner does not directly tune the nonlinear switching waveform. It first uses a linearized plant model around the operating point, then tunes the PI controller against that estimated plant.</li>
+    </ul>
+    <h2>Suggested Instructor Flow</h2>
+    <ol>
+    <li>Start by explaining that the plant and feedback signal are already prepared.</li>
+    <li>Point out the open <code>PWM</code> input and the prepared <code>Subtract</code> error signal.</li>
+    <li>Explain <code>error = Vtarget - Vout</code>.</li>
+    <li>Add the <code>PID Controller</code> block between <code>Subtract</code> and <code>PWM</code>.</li>
+    <li>Configure the controller as a discrete-time PI controller.</li>
+    <li>Enter simple initial gains, then enable saturation from <code>0</code> to <code>1</code>.</li>
+    <li>Open PID Tuner from the controller block.</li>
+    <li>Estimate a new plant by linearizing the Simscape model at the operating point.</li>
+    <li>Tune the PI response using the PID Tuner sliders.</li>
+    <li>Apply the tuned gains back to the model.</li>
+    <li>Run the model and compare the voltage response against the <code>40 V</code> target.</li>
+    <li>Close by explaining that this is the first closed-loop voltage regulator in the workshop sequence.</li>
+    </ol>
+    <h2>Participant Exercise</h2>
+    <p>Ask participants to try these controller cases:</p>
+    <table><thead><tr><th>Case</th><th>Controller Setup</th><th>Expected Result</th></tr></thead><tbody>
+    <tr><td>No controller</td><td>PWM input not driven</td><td>Model cannot regulate the converter</td></tr>
+    <tr><td>Initial PI</td><td><code>P = 1</code>, <code>I = 1</code> before tuning</td><td>Basic closed-loop behavior, not final</td></tr>
+    <tr><td>PID Tuner PI</td><td>Tuned from estimated plant</td><td>Tracks near the <code>40 V</code> target</td></tr>
+    </tbody></table>
+    <p>For each valid case, record:</p>
+    <ul>
+    <li>Final output voltage.</li>
+    <li>Settling behavior.</li>
+    <li>Whether the response is slow, oscillatory, or well damped.</li>
+    </ul>
+    <h2>Troubleshooting</h2>
+    <table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead><tbody>
+    <tr><td>PWM input is still open</td><td>PID output was not connected</td><td>Connect <code>PID Controller</code> output to <code>PWM</code> input</td></tr>
+    <tr><td>Output voltage moves away from target</td><td>Feedback sign is wrong</td><td>Use <code>Target</code> on the positive Sum input and measured voltage on the negative input</td></tr>
+    <tr><td>Duty command is invalid</td><td>PID output saturation is disabled</td><td>Enable saturation and set limits to <code>0</code> and <code>1</code></td></tr>
+    <tr><td>Output response is too slow</td><td>PI gains are too small</td><td>Increase gains or use the reference tuned gains</td></tr>
+    <tr><td>Output oscillates</td><td>PI gains are too aggressive</td><td>Reduce gains or retune the controller</td></tr>
+    <tr><td>Scope does not show voltage</td><td>Voltage sensor converter is disconnected</td><td>Check <code>Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Scope input 2</code></td></tr>
+    <tr><td>PID Tuner cannot tune directly</td><td>The Simscape buck converter is nonlinear and switching</td><td>Estimate a new plant by linearizing the model at an operating point</td></tr>
+    <tr><td>Tuned response does not look right</td><td>Operating point or slider settings are not suitable</td><td>Re-estimate the plant near the nominal operating point and adjust response/transient sliders</td></tr>
+    </tbody></table>
+    <h2>Reference Model Check</h2>
+    <p>The completed model should follow this signal structure:</p>
+    <pre><code>Target 40 V -&gt; Subtract positive input
+Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Unit Delay -&gt; Subtract negative input
+Subtract -&gt; PID Controller -&gt; PWM
+PWM -&gt; Simulink-PS Converter -&gt; MOSFET gate
+Current Sensor -&gt; PS-Simulink Converter -&gt; Scope input 1
+Voltage Sensor -&gt; PS-Simulink Converter1 -&gt; Scope input 2</code></pre>
+    <p>Reference controller settings:</p>
+    <pre><code>Controller = PI
+Form = Parallel
+Time domain = Discrete-time
+Sample time = 1e-4
+P = 0.0244696968424815
+I = 23.7511768764149
+D = 0
+Output saturation = on
+Lower saturation limit = 0
+Upper saturation limit = 1
+Simulation stop time = 0.5</code></pre>
+  </main>
+</body>
+</html>
+

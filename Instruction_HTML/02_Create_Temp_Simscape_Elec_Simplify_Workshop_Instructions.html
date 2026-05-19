@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop 02: Add MOSFET Thermal Behavior to the Simplified Buck Converter</title>
+  <style>
+:root {
+  color-scheme: light;
+  --page: #f6f8fb;
+  --surface: #ffffff;
+  --ink: #1f2937;
+  --line: #d7dde6;
+  --accent: #0b6f8f;
+  --accent-soft: #e7f5f8;
+  --code-bg: #f0f3f7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.58;
+}
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 40px 28px 64px;
+  background: var(--surface);
+  min-height: 100vh;
+  box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.06), 0 18px 50px rgba(31, 41, 55, 0.08);
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  color: #13202f;
+  margin: 1.6em 0 0.55em;
+}
+h1 {
+  margin-top: 0;
+  padding-bottom: 0.45em;
+  border-bottom: 3px solid var(--accent);
+  font-size: 2.2rem;
+}
+h2 {
+  border-top: 1px solid var(--line);
+  padding-top: 1.15em;
+  font-size: 1.45rem;
+}
+h3 { font-size: 1.15rem; }
+p { margin: 0.75em 0; }
+ul, ol { padding-left: 1.45rem; margin: 0.7em 0 1em; }
+li { margin: 0.28em 0; }
+code {
+  background: var(--code-bg);
+  border: 1px solid #dce2ea;
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.93em;
+}
+pre {
+  overflow-x: auto;
+  background: #eef6f8;
+  color: #12313c;
+  border: 1px solid #c8d9df;
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin: 1em 0 1.25em;
+}
+pre code {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  font-size: 0.94rem;
+}
+figure {
+  margin: 1.2rem 0 1.55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 10px;
+}
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+figcaption {
+  color: #4b5563;
+  font-size: 0.92rem;
+  margin-top: 8px;
+  text-align: center;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0 1.35em;
+  font-size: 0.95rem;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  vertical-align: top;
+}
+th {
+  background: var(--accent-soft);
+  color: #12313c;
+  text-align: left;
+  font-weight: 650;
+}
+tr:nth-child(even) td { background: #fafbfd; }
+@media (max-width: 720px) {
+  main { padding: 28px 18px 48px; box-shadow: none; }
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.25rem; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Workshop 02: Add MOSFET Thermal Behavior to the Simplified Buck Converter</h1>
+    <h2>Goal</h2>
+    <p>Extend the simplified buck converter model with MOSFET thermal behavior, then use a second evaluation model to show the thermal effect more clearly. This workshop follows the clip <code>02_Create_Temp_Simscape_Elec_Simplify.mp4</code>.</p>
+    <p>The clip has two sessions:</p>
+    <ol>
+    <li>Start from <code>Create_Temp_Simscape_Elec_Simplify.slx</code> and finish with <code>Create_Temp_Simscape_Elec_Simplify_finished.slx</code>.</li>
+    <li>Open <code>Thermal_Mosfet_evaluation.slx</code> and use it to compare MOSFET temperature behavior when the heatsink convection setting changes.</li>
+    </ol>
+    <p>By the end of this workshop, participants should be able to:</p>
+    <ul>
+    <li>Enable the thermal port on a Simscape Electrical MOSFET.</li>
+    <li>Connect the MOSFET thermal port to a heatsink thermal network.</li>
+    <li>Add a temperature sensor and route MOSFET temperature to the Scope.</li>
+    <li>Run a coupled electro-thermal simulation.</li>
+    <li>Use <code>Thermal_Mosfet_evaluation.slx</code> to make thermal differences easier to observe.</li>
+    </ul>
+    <h2>Prerequisites</h2>
+    <ul>
+    <li>MATLAB with Simulink.</li>
+    <li>Simscape.</li>
+    <li>Simscape Electrical.</li>
+    <li>Completed understanding of Workshop 01 buck converter operation.</li>
+    </ul>
+    <h2>Reference Values</h2>
+    <h3>Session 1: Thermal Buck Converter</h3>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>DC input voltage</td><td><code>50 V</code></td></tr>
+    <tr><td>Duty cycle</td><td><code>0.8</code></td></tr>
+    <tr><td>PWM period</td><td><code>1e-5 s</code></td></tr>
+    <tr><td>Inductor</td><td><code>3e-3 H</code></td></tr>
+    <tr><td>Capacitor</td><td><code>1e-5 F</code></td></tr>
+    <tr><td>Load resistor</td><td><code>1 Ohm</code></td></tr>
+    <tr><td>MOSFET off conductance</td><td><code>1e-6 1/Ohm</code></td></tr>
+    <tr><td>MOSFET on resistance</td><td><code>0.01 Ohm</code></td></tr>
+    <tr><td>MOSFET thermal network</td><td>Junction-case</td></tr>
+    <tr><td>MOSFET thermal mass</td><td><code>[3, 25] J/K</code></td></tr>
+    <tr><td>Initial MOSFET junction temperature</td><td><code>25 degC</code></td></tr>
+    <tr><td>Heatsink convection area</td><td><code>1 m^2</code></td></tr>
+    <tr><td>Heat transfer coefficient</td><td><code>1 W/(m^2*K)</code></td></tr>
+    <tr><td>Heatsink mass</td><td><code>0.01 kg</code></td></tr>
+    <tr><td>Initial heatsink temperature</td><td><code>298.15 K</code></td></tr>
+    <tr><td>Ambient temperature</td><td><code>298.15 K</code></td></tr>
+    <tr><td>Simulation stop time</td><td><code>0.1 s</code></td></tr>
+    </tbody></table>
+    <h3>Session 2: Thermal Evaluation Model</h3>
+    <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+    <tr><td>DC input voltage</td><td><code>50 V</code></td></tr>
+    <tr><td>Load resistor</td><td><code>1 Ohm</code></td></tr>
+    <tr><td>Step time</td><td><code>1 s</code></td></tr>
+    <tr><td>Step initial value</td><td><code>0</code></td></tr>
+    <tr><td>Step final value</td><td><code>1</code></td></tr>
+    <tr><td>Heatsink convection area baseline</td><td><code>1 m^2</code></td></tr>
+    <tr><td>Heat transfer coefficient</td><td><code>1 W/(m^2*K)</code></td></tr>
+    <tr><td>Heatsink mass</td><td><code>0.01 kg</code></td></tr>
+    <tr><td>Ambient temperature</td><td><code>298.15 K</code></td></tr>
+    <tr><td>Simulation stop time</td><td><code>50 s</code></td></tr>
+    </tbody></table>
+    <h2>Session 1: Add Thermal Behavior to the Buck Converter</h2>
+    <p>Start from:</p>
+    <pre><code>Create_Temp_Simscape_Elec_Simplify.slx</code></pre>
+    <p>Finish with:</p>
+    <pre><code>Create_Temp_Simscape_Elec_Simplify_finished.slx</code></pre>
+    <p>The starting model already contains the electrical buck converter from Workshop 01. The Scope already has three inputs, but the first Scope input is not connected yet. In this session, that first Scope input is used for MOSFET temperature.</p>
+    <h3>1. Open and review the starting model</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-01-starting-model.jpg" alt="Starting thermal buck converter model" loading="lazy"><figcaption>Starting thermal buck converter model</figcaption></figure>
+    <p><em>Video screenshot: the starting simplified buck converter before adding the MOSFET thermal path.</em></p>
+    <ol>
+    <li>Open <code>Create_Temp_Simscape_Elec_Simplify.slx</code>.</li>
+    <li>Confirm the electrical buck converter is already complete:</li>
+    </ol>
+    <ul>
+    <li><code>DC Voltage Source</code></li>
+    <li><code>MOSFET (Ideal, Switching)</code></li>
+    <li><code>Diode</code></li>
+    <li><code>Inductor</code></li>
+    <li><code>Capacitor</code></li>
+    <li><code>Resistor</code></li>
+    <li><code>Current Sensor</code></li>
+    <li><code>Voltage Sensor</code></li>
+    <li><code>PWM</code></li>
+    <li><code>Simulink-PS Converter</code></li>
+    <li>Two <code>PS-Simulink Converter</code> blocks</li>
+    <li><code>Scope</code></li>
+    <li><code>Electrical Reference</code></li>
+    <li><code>Solver Configuration</code></li>
+    </ul>
+    <ol>
+    <li>Confirm the model still uses duty cycle <code>0.8</code>.</li>
+    <li>Observe that the MOSFET does not yet expose a thermal conserving port.</li>
+    </ol>
+    <h3>2. Enable the MOSFET thermal port</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-02-mosfet-thermal-port.jpg" alt="MOSFET thermal port settings" loading="lazy"><figcaption>MOSFET thermal port settings</figcaption></figure>
+    <p>*Video screenshot: enabling the MOSFET thermal network so the block exposes thermal port <code>H</code>.*</p>
+    <ol>
+    <li>Open the block parameters for <code>MOSFET (Ideal, Switching)</code>.</li>
+    <li>Enable the thermal port or thermal network option.</li>
+    <li>Select the junction-case thermal network.</li>
+    <li>Confirm the key MOSFET thermal settings:</li>
+    </ol>
+    <pre><code>   Thermal network = Junction-case
+   Thermal mass = [3, 25] J/K
+   Initial MOSFET junction temperature = 25 degC</code></pre>
+    <ol>
+    <li>Apply the parameter change.</li>
+    <li>Confirm the MOSFET block now shows a thermal conserving port <code>H</code>.</li>
+    </ol>
+    <h3>3. Add the heatsink subsystem</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-03-heatsink-subsystem.jpg" alt="Heatsink subsystem added" loading="lazy"><figcaption>Heatsink subsystem added</figcaption></figure>
+    <p>*Video screenshot: the <code>Heatsink Model Simple</code> subsystem used for MOSFET heat removal.*</p>
+    <ol>
+    <li>Add or paste the subsystem <code>Heatsink Model Simple</code> into the model.</li>
+    <li>Confirm the subsystem has one thermal conserving port named <code>H</code>.</li>
+    <li>Connect the MOSFET thermal port <code>H</code> to the <code>Heatsink Model Simple</code> thermal port.</li>
+    </ol>
+    <p>The heatsink subsystem represents heat removal from the MOSFET to ambient.</p>
+    <h3>4. Review the heatsink subsystem</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-04-review-heatsink.jpg" alt="Heatsink subsystem internals" loading="lazy"><figcaption>Heatsink subsystem internals</figcaption></figure>
+    <p><em>Video screenshot: internal thermal blocks inside the heatsink subsystem.</em></p>
+    <ol>
+    <li>Open <code>Heatsink Model Simple</code>.</li>
+    <li>Confirm the subsystem contains:</li>
+    </ol>
+    <ul>
+    <li><code>Ambient Temperature</code></li>
+    <li><code>Convection Heatsink</code></li>
+    <li><code>Heat Flow Sensor</code></li>
+    <li><code>Heatsink Thermal Mass</code></li>
+    <li><code>Ideal Temperature Source</code></li>
+    <li><code>Thermal Reference</code></li>
+    </ul>
+    <ol>
+    <li>Confirm the main parameter values:</li>
+    </ol>
+    <pre><code>   Ambient temperature = 298.15 K
+   Convection area = 1 m^2
+   Heat transfer coefficient = 1 W/(m^2*K)
+   Heatsink mass = 0.01 kg
+   Initial heatsink temperature = 298.15 K</code></pre>
+    <ol>
+    <li>Return to the top level of <code>Create_Temp_Simscape_Elec_Simplify.slx</code>.</li>
+    </ol>
+    <h3>5. Add MOSFET temperature measurement</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-05-temperature-measurement.jpg" alt="Temperature measurement connection" loading="lazy"><figcaption>Temperature measurement connection</figcaption></figure>
+    <p><em>Video screenshot: temperature measurement routed to the first Scope input.</em></p>
+    <ol>
+    <li>Add a <code>Temperature Sensor</code>.</li>
+    <li>Connect the sensor thermal port to the same thermal node as the MOSFET thermal port and <code>Heatsink Model Simple</code>.</li>
+    <li>Add a <code>PS-Simulink Converter</code>.</li>
+    <li>Connect the temperature sensor physical signal output to the new converter.</li>
+    <li>Connect the new converter output to Scope input 1.</li>
+    <li>Name the signal <code>Temperature</code>.</li>
+    </ol>
+    <p>Suggested Scope signal order:</p>
+    <pre><code>Scope input 1: Temperature
+Scope input 2: Current
+Scope input 3: Voltage</code></pre>
+    <h3>6. Configure and run the thermal buck converter</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-06-run-thermal-buck.jpg" alt="Thermal buck converter result" loading="lazy"><figcaption>Thermal buck converter result</figcaption></figure>
+    <p><em>Video screenshot: simulation result after adding MOSFET temperature measurement.</em></p>
+    <ol>
+    <li>Set the simulation stop time to:</li>
+    </ol>
+    <pre><code>   0.1</code></pre>
+    <ol>
+    <li>Run the model.</li>
+    <li>Open the Scope.</li>
+    <li>Confirm the Scope shows:</li>
+    </ol>
+    <ul>
+    <li>MOSFET temperature.</li>
+    <li>Output current.</li>
+    <li>Output voltage.</li>
+    </ul>
+    <ol>
+    <li>Save the completed model.</li>
+    </ol>
+    <p>The result should match the structure of <code>Create_Temp_Simscape_Elec_Simplify_finished.slx</code>.</p>
+    <h3>7. Explain the Session 1 result</h3>
+    <p>Use this model to explain that the same electrical buck converter can be extended with a thermal domain. The MOSFET still works as the switching device, but its losses now create heat flow into the connected heatsink network.</p>
+    <p>The temperature change in this short <code>0.1 s</code> buck converter simulation may be small. The second session uses a simpler thermal evaluation model so the thermal effect is easier to see.</p>
+    <h2>Session 2: Use the MOSFET Thermal Evaluation Model</h2>
+    <p>Use this model:</p>
+    <pre><code>Thermal_Mosfet_evaluation.slx</code></pre>
+    <p>This model isolates the MOSFET, load, heatsink, and temperature measurement so convection changes produce a clearer thermal response over a longer simulation.</p>
+    <h3>1. Open and review the evaluation model</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-08-evaluation-model.jpg" alt="Thermal evaluation model" loading="lazy"><figcaption>Thermal evaluation model</figcaption></figure>
+    <p><em>Video screenshot: the simplified thermal MOSFET evaluation model.</em></p>
+    <ol>
+    <li>Open <code>Thermal_Mosfet_evaluation.slx</code>.</li>
+    <li>Review the simplified circuit:</li>
+    </ol>
+    <ul>
+    <li><code>DC Voltage Source</code>: <code>50 V</code></li>
+    <li><code>Current Sensor</code></li>
+    <li><code>MOSFET (Ideal, Switching)</code> with thermal port enabled</li>
+    <li><code>Resistor</code>: <code>1 Ohm</code></li>
+    <li><code>Voltage Sensor</code></li>
+    <li><code>Step</code> gate command through a <code>Simulink-PS Converter</code></li>
+    <li><code>Temperature Sensor</code></li>
+    <li><code>Thermal 1</code> heatsink subsystem</li>
+    </ul>
+    <ol>
+    <li>Confirm the Step block uses:</li>
+    </ol>
+    <pre><code>   Step time = 1 s
+   Initial value = 0
+   Final value = 1</code></pre>
+    <ol>
+    <li>Confirm the simulation stop time is:</li>
+    </ol>
+    <pre><code>   50</code></pre>
+    <h3>2. Inspect the Thermal 1 subsystem</h3>
+    <ol>
+    <li>Open the subsystem <code>Thermal 1</code>.</li>
+    <li>Locate the <code>Convection Heatsink</code> block.</li>
+    <li>Confirm the baseline settings:</li>
+    </ol>
+    <pre><code>   Convection area = 1 m^2
+   Heat transfer coefficient = 1 W/(m^2*K)</code></pre>
+    <ol>
+    <li>Confirm the heatsink thermal mass settings:</li>
+    </ol>
+    <pre><code>   Heatsink mass = 0.01 kg
+   Initial heatsink temperature = 298.15 K</code></pre>
+    <ol>
+    <li>Return to the top level.</li>
+    </ol>
+    <h3>3. Run the baseline case</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-10-baseline-case.jpg" alt="Baseline thermal case" loading="lazy"><figcaption>Baseline thermal case</figcaption></figure>
+    <p>*Video screenshot: baseline thermal evaluation run with convection area at <code>1 m^2</code>.*</p>
+    <ol>
+    <li>Keep the convection area at <code>1 m^2</code>.</li>
+    <li>Run the simulation.</li>
+    <li>Inspect the logged results for:</li>
+    </ol>
+    <ul>
+    <li><code>Temperature (K)</code></li>
+    <li><code>Current (A)</code></li>
+    <li><code>V_Load (V)</code></li>
+    </ul>
+    <ol>
+    <li>Use the baseline case as the reference cooling condition.</li>
+    </ol>
+    <h3>4. Increase the convection area</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-11-change-area-4m2.jpg" alt="Change convection area to 4 square meters" loading="lazy"><figcaption>Change convection area to 4 square meters</figcaption></figure>
+    <p><em>Video screenshot: changing the convection area for the improved cooling case.</em></p>
+    <ol>
+    <li>Open <code>Thermal 1</code>.</li>
+    <li>Open <code>Convection Heatsink</code>.</li>
+    <li>Change the convection area from the baseline value to:</li>
+    </ol>
+    <pre><code>   Convection area = 4 m^2</code></pre>
+    <ol>
+    <li>Run the simulation again.</li>
+    <li>Compare the temperature response with the baseline case.</li>
+    </ol>
+    <p>Expected observation:</p>
+    <ul>
+    <li>Larger convection area removes heat more effectively.</li>
+    <li>MOSFET temperature rises less or settles at a lower value.</li>
+    <li>The thermal effect is easier to see than in the short buck converter simulation.</li>
+    </ul>
+    <h3>5. Compare the two thermal cases</h3>
+    <figure><img src="assets/02_Create_Temp_Simscape_Elec_Simplify/step-12-compare-cases.jpg" alt="Comparison between 1 and 4 square meter convection area" loading="lazy"><figcaption>Comparison between 1 and 4 square meter convection area</figcaption></figure>
+    <p>*Video screenshot: comparison between the <code>1 m^2</code> and <code>4 m^2</code> convection-area runs.*</p>
+    <p>Use the evaluation model to compare:</p>
+    <table><thead><tr><th>Case</th><th>Convection Area</th><th>Expected Temperature Behavior</th></tr></thead><tbody>
+    <tr><td>Baseline cooling</td><td><code>1 m^2</code></td><td>Higher temperature rise</td></tr>
+    <tr><td>Improved cooling</td><td><code>4 m^2</code></td><td>Lower temperature rise</td></tr>
+    </tbody></table>
+    <p>The exact temperature values depend on model settings and solver behavior. The important concept is the trend: stronger convection produces better cooling.</p>
+    <h2>Suggested Instructor Flow</h2>
+    <ol>
+    <li>Open <code>Create_Temp_Simscape_Elec_Simplify.slx</code>.</li>
+    <li>Point out that the electrical buck converter is already complete.</li>
+    <li>Enable the MOSFET thermal port and explain the new thermal conserving port.</li>
+    <li>Add <code>Heatsink Model Simple</code> and connect it to the MOSFET thermal port.</li>
+    <li>Add the <code>Temperature Sensor</code> and route temperature to Scope input 1.</li>
+    <li>Run the model and show that electrical and thermal behavior now simulate together.</li>
+    <li>Open <code>Thermal_Mosfet_evaluation.slx</code>.</li>
+    <li>Run the baseline case.</li>
+    <li>Change the <code>Convection Heatsink</code> area and compare the temperature response.</li>
+    <li>Close by explaining that thermal parameters such as convection area, heat transfer coefficient, heatsink mass, and ambient temperature can be changed directly in the physical model.</li>
+    </ol>
+    <h2>Participant Exercise</h2>
+    <p>Ask participants to run two cases in <code>Thermal_Mosfet_evaluation.slx</code>:</p>
+    <table><thead><tr><th>Case</th><th>Convection Area</th></tr></thead><tbody>
+    <tr><td>Baseline cooling</td><td><code>1 m^2</code></td></tr>
+    <tr><td>Improved cooling</td><td><code>4 m^2</code></td></tr>
+    </tbody></table>
+    <p>For each case, record:</p>
+    <ul>
+    <li>Final MOSFET temperature.</li>
+    <li>Peak MOSFET temperature.</li>
+    <li>Whether the temperature rises quickly or slowly.</li>
+    </ul>
+    <p>Then ask:</p>
+    <pre><code>Which convection area gives the lowest MOSFET temperature?
+Why does increasing convection area improve cooling?</code></pre>
+    <h2>Troubleshooting</h2>
+    <table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead><tbody>
+    <tr><td>MOSFET has no thermal port</td><td>Thermal port option is not enabled</td><td>Open MOSFET parameters and enable the thermal network/thermal port</td></tr>
+    <tr><td>Thermal network error</td><td>Heatsink subsystem is disconnected or missing thermal reference</td><td>Check <code>Heatsink Model Simple</code> or <code>Thermal 1</code> connections</td></tr>
+    <tr><td>Scope input 1 is empty</td><td>Temperature converter is not connected</td><td>Connect <code>Temperature Sensor</code> to <code>PS-Simulink Converter2</code>, then to Scope input 1</td></tr>
+    <tr><td>Temperature changes very little in Session 1</td><td>Buck converter simulation is short</td><td>Use <code>Thermal_Mosfet_evaluation.slx</code> for a clearer 50-second thermal comparison</td></tr>
+    <tr><td>Results do not clearly differ in Session 2</td><td>Convection area was not changed or the wrong run is being inspected</td><td>Compare the baseline <code>1 m^2</code> run with the updated <code>4 m^2</code> run</td></tr>
+    </tbody></table>
+    <h2>Reference Model Check</h2>
+    <p>Session 1 completed model should include this added thermal path:</p>
+    <pre><code>MOSFET thermal port H -&gt; Heatsink Model Simple
+MOSFET thermal node -&gt; Temperature Sensor -&gt; PS-Simulink Converter -&gt; Scope input 1
+Existing Current Sensor -&gt; PS-Simulink Converter -&gt; Scope input 2
+Existing Voltage Sensor -&gt; PS-Simulink Converter -&gt; Scope input 3</code></pre>
+    <p>Session 2 evaluation model should support this comparison:</p>
+    <pre><code>Step -&gt; Simulink-PS Converter -&gt; MOSFET gate
+DC Voltage Source -&gt; Current Sensor -&gt; MOSFET -&gt; Resistor -&gt; Electrical Reference
+MOSFET thermal port -&gt; Thermal 1 subsystem
+MOSFET thermal node -&gt; Temperature Sensor -&gt; PS-Simulink Converter
+Change Thermal 1 / Convection Heatsink / area to compare cooling behavior</code></pre>
+  </main>
+</body>
+</html>
+

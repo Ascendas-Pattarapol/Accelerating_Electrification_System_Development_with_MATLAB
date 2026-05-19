@@ -1,0 +1,10 @@
+config load "C:\Users\PattarapolSangaroon\My_folder\MKT_Preparing\Video_for_Training\Simplified_Version\Voltage_Controller_Project\Voltage_Controller_Project.ioc"
+project toolchain STM32CubeIDE
+
+SetStructure Advanced
+
+project setCustomFWPath "C:\Users\PattarapolSangaroon\STM32Cube\Repository\STM32Cube_FW_G4_V1.6.0"
+
+project generate 
+
+exit wait
