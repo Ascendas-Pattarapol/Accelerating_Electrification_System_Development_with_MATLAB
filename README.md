@@ -1,5 +1,7 @@
 # Buck Converter Simscape Electrical Workshop
 
+[![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=Ascendas-Pattarapol/Accelerating_Electrification_System_Development_with_MATLAB)
+
 This workshop series builds a buck converter workflow step by step, starting from a simple averaged converter model and progressing to detailed Simscape Electrical modeling, thermal behavior, PI control, controller optimization, and embedded-code verification using SIL and PIL.
 
 ## Workshop Overview
